@@ -9,6 +9,7 @@ from datalayout import *
 from cfg import *
 from regalloc import *
 from codegen import *
+from optimizations import *
 
 
 def compile_program(text, unroll_factor=None):
@@ -18,6 +19,7 @@ def compile_program(text, unroll_factor=None):
     print('\n', res, '\n')
 
     res.navigate(print_stat_list)
+    res = optimize(res, unroll_factor)
 
     node_list = get_node_list(res)
     for n in node_list:
