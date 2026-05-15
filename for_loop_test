@@ -1,0 +1,10 @@
+VAR i, sum;
+
+BEGIN
+    sum := 0;
+    @pragma unroll 4
+    FOR i FROM 0 TO 10 DO
+    BEGIN
+        !i
+    END
+END.

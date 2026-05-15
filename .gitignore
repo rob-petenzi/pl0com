@@ -9,3 +9,5 @@ test*
 out
 .idea
 *.log
+
+.venv

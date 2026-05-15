@@ -186,7 +186,7 @@ class IRNode:  # abstract
             pass
 
         attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
-                 'global_symtab', 'local_symtab', 'offset'} & set(dir(self))
+                 'global_symtab', 'local_symtab', 'offset', 'init', 'ind_var', 'unroll_fac'} & set(dir(self))
 
         res = repr(type(self)) + ' ' + repr(id(self)) + ' {\n'
         if self.parent is not None:
@@ -214,7 +214,7 @@ class IRNode:  # abstract
 
     def navigate(self, action):
         attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
-                 'global_symtab', 'local_symtab', 'offset'} & set(dir(self))
+                 'global_symtab', 'local_symtab', 'offset', 'init', 'ind_var'} & set(dir(self))
         if 'children' in dir(self) and len(self.children):
             print('navigating children of', type(self), id(self), len(self.children))
             for node in self.children:
@@ -236,7 +236,7 @@ class IRNode:  # abstract
             self.children[self.children.index(old)] = new
             return True
         attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
-                 'global_symtab', 'local_symtab', 'offset'} & set(dir(self))
+                 'global_symtab', 'local_symtab', 'offset', 'init', 'ind_var'} & set(dir(self))
         for d in attrs:
             try:
                 if getattr(self, d) == old:
@@ -477,17 +477,42 @@ class WhileStat(Stat):
         return self.parent.replace(self, stat_list)
 
 
-class ForStat(Stat):  # incomplete
-    def __init__(self, parent=None, init=None, cond=None, step=None, body=None, symtab=None):
+class ForStat(Stat):
+    def __init__(self, parent=None, ind_var=None, init=None, cond=None, step=None, body=None, unroll_fac=None, symtab=None):
         super().__init__(parent, [], symtab)
+        self.ind_var = ind_var
         self.init = init
         self.cond = cond
-        self.step = step
         self.body = body
+        self.step = step
+        self.unroll_fac = unroll_fac
+
+        self.ind_var.parent = self
         self.init.parent = self
         self.cond.parent = self
-        self.step.parent = self
         self.body.parent = self
+        self.step.parent = self
+    
+    def lower(self):
+        entry_label = TYPENAMES['label']()
+        exit_label = TYPENAMES['label']()
+        entry_stat = EmptyStat(self.parent, symtab=self.symtab)
+        exit_stat = EmptyStat(self.parent, symtab=self.symtab)
+        exit_stat.set_label(exit_label)
+        entry_stat.set_label(entry_label)
+        branch = BranchStat(None, self.cond.destination(), exit_label, self.symtab, negcond=True)
+        loop = BranchStat(None, None, entry_label, self.symtab)
+        stat_list = StatList(self.parent, [
+            self.init,
+            entry_stat,
+            self.cond, 
+            branch, 
+            self.body,
+            self.step, 
+            loop, 
+            exit_stat], 
+            self.symtab)
+        return self.parent.replace(self, stat_list)
 
 
 class AssignStat(Stat):

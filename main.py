@@ -11,22 +11,19 @@ from regalloc import *
 from codegen import *
 
 
-def compile_program(text):
+def compile_program(text, unroll_factor=None):
     lex = lexer.Lexer(text)
     pars = parser.Parser(lex)
     res = pars.program()
     print('\n', res, '\n')
 
-    return
     res.navigate(print_stat_list)
 
     node_list = get_node_list(res)
     for n in node_list:
         print(type(n), id(n), '->', type(n.parent), id(n.parent))
     print('\nTotal nodes in IR:', len(node_list), '\n')
-
     res.navigate(lowering)
-
     node_list = get_node_list(res)
     print('\n', res, '\n')
     for n in node_list:
@@ -35,6 +32,7 @@ def compile_program(text):
             n.flatten()
         except Exception:
             pass
+    # exit()
     # res.navigate(flattening)
     print('\n', res, '\n')
 
@@ -62,17 +60,30 @@ def compile_program(text):
 
 
 def driver_main():
+    """Parses parameters and runs the compiler.
+    If no parameter is provided, a default test program is used.
+    If one is provided it is interpreted as the input file."""
     from lexer import __test_program
-    test_program=__test_program
-    import sys
-    print(sys.argv)
-    if len(sys.argv) >= 2:
-        with open(sys.argv[1], 'r') as inf :
-            test_program = inf.read()
-    code = compile_program(test_program)
+    import argparse
 
-    if len(sys.argv) > 2:
-        with open(sys.argv[-1], 'w') as outf :
+    test_program=__test_program
+    parser = argparse.ArgumentParser(description="PL/0 Compiler")
+    parser.add_argument("input_file", nargs='?', help="Path to the input PL/0 file")
+    parser.add_argument("output_file", nargs='?', help="Path to write the compiled code")
+    parser.add_argument("-u", "--unroll", type=int, default=None, 
+                        help="Global loop unroll factor")
+    
+    global args
+    args = parser.parse_args()
+    test_program = __test_program
+    
+    if args.input_file:
+        with open(args.input_file, 'r') as inf:
+            test_program = inf.read()
+    code = compile_program(test_program, args.unroll)
+
+    if args.output_file:
+        with open(args.output_file, 'w') as outf:
             outf.write(code)
 
 

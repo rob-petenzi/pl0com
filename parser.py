@@ -5,7 +5,7 @@
 import ir
 from logger import logger
 from functools import reduce
-
+import copy
 
 class Parser:
     def __init__(self, the_lexer):
@@ -71,6 +71,7 @@ class Parser:
 
     @logger
     def factor(self, symtab):
+        '''F -> var | const | ( E )'''
         if self.accept('ident'):
             var = symtab.find(self.value)
             offs = self.array_offset(symtab)
@@ -132,13 +133,22 @@ class Parser:
 
     @logger
     def statement(self, symtab):
+        unroll_fac = None
+        if self.accept('pragmasym'):
+            if self.expect('unrollsym'):
+                unroll_fac = self.factor(symtab)
+                if not isinstance(unroll_fac, ir.Const):
+                    print("[ERROR] Unroll factor must be a constant.")
+                unroll_fac = unroll_fac.value
+                self.expect('semicolon')
+            else:
+                print("[ERROR] Unknown pragma")
         if self.accept('ident'):
             target = symtab.find(self.value)
             offset = self.array_offset(symtab)
             self.expect('becomes')
             expr = self.expression(symtab)
             return ir.AssignStat(target=target, offset=offset, expr=expr, symtab=symtab)
-
         elif self.accept('callsym'):
             self.expect('ident')
             return ir.CallStat(call_expr=ir.CallExpr(function=symtab.find(self.value), symtab=symtab), symtab=symtab)
@@ -150,6 +160,38 @@ class Parser:
             self.expect('endsym')
             statement_list.print_content()
             return statement_list
+        elif self.accept('forsym'):
+            ind_var = self.factor(symtab)
+            self.expect('fromsym')
+            start = self.factor(symtab)
+            self.expect('tosym')
+            stop = self.factor(symtab)
+            step = None
+            if self.accept('bysym'):
+                step = self.factor(symtab)
+            else:
+                step = ir.Const(value=1, symtab=symtab)
+            self.expect('dosym')
+            body = self.statement(symtab)
+            ind_init = ir.Var(var=ind_var.symbol, symtab=symtab)
+            ind_cond = ir.Var(var=ind_var.symbol, symtab=symtab)
+            ind_step = ir.Var(var=ind_var.symbol, symtab=symtab)
+            ind_assign = ir.Var(var=ind_var.symbol, symtab=symtab)
+            
+            if not isinstance(start, ir.Const) or not isinstance(stop, ir.Const):
+                print("[ERROR] For loop bounds must be constant.")
+            
+            self.init = ir.AssignStat(target=ind_var.symbol, offset=None, expr=start, symtab=symtab)
+            if start.value > stop.value:
+                self.cond = ir.BinExpr(children=['gtr', ind_cond, stop], symtab=symtab)
+                calc_step = ir.BinExpr(children=['minus', ind_step, step], symtab=symtab)
+            else:
+                self.cond = ir.BinExpr(children=['lss', ind_cond, stop], symtab=symtab)
+                calc_step = ir.BinExpr(children=['plus', ind_step, step], symtab=symtab)
+                
+                self.step = ir.AssignStat(target=ind_var.symbol, offset=None, expr=calc_step, symtab=symtab)
+
+            return ir.ForStat(ind_var=ind_var, init=self.init, cond=self.cond, step=self.step, body=body, unroll_fac=unroll_fac, symtab=symtab)
         elif self.accept('ifsym'):
             cond = self.condition(symtab)
             self.expect('thensym')
