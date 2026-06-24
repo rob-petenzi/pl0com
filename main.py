@@ -9,6 +9,7 @@ from datalayout import *
 from cfg import *
 from regalloc import *
 from codegen import *
+import argparse
 
 
 def compile_program(text):
@@ -17,7 +18,6 @@ def compile_program(text):
     res = pars.program()
     print('\n', res, '\n')
 
-    return
     res.navigate(print_stat_list)
 
     node_list = get_node_list(res)
@@ -62,19 +62,26 @@ def compile_program(text):
 
 
 def driver_main():
-    from lexer import __test_program
-    test_program=__test_program
-    import sys
-    print(sys.argv)
-    if len(sys.argv) >= 2:
-        with open(sys.argv[1], 'r') as inf :
-            test_program = inf.read()
-    code = compile_program(test_program)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input", nargs="?", help="PL/0 input file path")
+    parser.add_argument("--test", action="store_true", help="Compile test program (./samples/prog1.pl0)")
+    parser.add_argument("-o", "--output", help="Output assembly file path")
+    parser.add_argument("-u", "--unroll", type=int, default=1, help="Global unroll factor")
+    parser.add_argument("-t", "--tile", type=int, default=32, help="Tile size")
+    args = parser.parse_args()
 
-    if len(sys.argv) > 2:
-        with open(sys.argv[-1], 'w') as outf :
-            outf.write(code)
+    if args.test:
+        with open("./samples/prog1.pl0", "r") as test_prog:
+            input_file = test_prog.read()
+    elif args.input:
+        with open(args.input, "r") as f_in:
+            input_file = f_in.read()
+    else:
+        parser.error("Input file is required, unless --test is used.")
+    code = compile_program(input_file)
 
+    with open(args.output or "./out.s", "w") as f_out:
+        f_out.write(code)
 
 if __name__ == '__main__':
     driver_main()

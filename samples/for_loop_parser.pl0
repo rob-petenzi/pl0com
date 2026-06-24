@@ -1,0 +1,10 @@
+VAR x, i, squ;
+ 
+BEGIN
+    squ := 0;
+    FOR x FROM 1 TO 10 DO
+    BEGIN
+        squ := squ + x;
+        !squ
+    END
+END. 

@@ -25,10 +25,14 @@ TOKEN_DEFS = {
     'endsym': ['end'],
     'ifsym': ['if'],
     'whilesym': ['while'],
+    'forsym': ['for'],
     'becomes': [':='],
     'thensym': ['then'],
     'elsesym': ['else'],
     'dosym': ['do'],
+    'fromsym': ['from'],
+    'tosym': ['to'],
+    'bysym': ['by'],
     'constsym': ['const'],
     'comma': [','],
     'varsym': ['var'],
@@ -36,7 +40,9 @@ TOKEN_DEFS = {
     'period': ['.'],
     'oddsym': ['odd'],
     'print': ['!', 'print'],
-    'read': ['?', 'read']
+    'read': ['?', 'read'],
+    'pragmasym': ['@pragma'],
+    'unrollsym': ['unroll']
 }
 
 

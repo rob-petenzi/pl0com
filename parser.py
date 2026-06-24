@@ -89,6 +89,22 @@ class Parser:
             self.getsym()
 
     @logger
+    def read_identifier(self, symtab):
+        """Read just the variable symbol"""
+        if self.expect('ident'):
+            var = symtab.find(self.value)
+            return var
+    
+    @logger 
+    def read_const(self):
+        """Read value of a constant"""
+        if self.expect('number'):
+            return int(self.value)
+        else:
+            self.error("expected constant")
+            exit()
+
+    @logger
     def term(self, symtab):
         expr = self.factor(symtab)
         while self.new_sym in ['times', 'slash']:
@@ -163,6 +179,23 @@ class Parser:
             self.expect('dosym')
             body = self.statement(symtab)
             return ir.WhileStat(cond=cond, body=body, symtab=symtab)
+        elif self.accept('forsym'):
+            ind_var = self.read_identifier(symtab)
+            self.expect('fromsym')
+            start = self.read_const()
+            self.expect('tosym')
+            stop = self.read_const()
+            if self.expect('bysym'):
+                step = self.read_const()
+            else:
+                # Default loop increment is 1
+                step = 1
+            if step == 0:
+                self.error("step value must be different than 0")
+                exit()
+            self.expect('dosym')
+            body = self.statement(symtab)
+            return ir.ForStat(ind_sym=ind_var, init=start, cond=stop, step=step, body=body, symtab=symtab)
         elif self.accept('print'):
             exp = self.expression(symtab)
             return ir.PrintStat(exp=exp, symtab=symtab)
