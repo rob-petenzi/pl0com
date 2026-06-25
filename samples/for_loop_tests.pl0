@@ -1,0 +1,48 @@
+VAR x, i, squ;
+
+BEGIN
+    squ := 0;
+
+    !100;
+    FOR x FROM 1 TO 3 DO
+        !x;
+
+    !200;
+    FOR x FROM 1 TO 5 BY 2 DO
+        !x;
+
+    !300;
+    FOR x FROM 5 TO 1 DO
+        !x;
+
+    !400;
+    FOR x FROM 5 TO 1 BY 2 DO
+        !x;
+
+    !500;
+    FOR x FROM 4 TO 4 DO
+        !x;
+
+    !600;
+    @pragma unroll 1
+    FOR x FROM 1 TO 4 DO
+        !x;
+
+    !700;
+    @pragma unroll 0
+    FOR x FROM 2 TO 8 BY 2 DO
+        !x;
+
+    !800;
+    @pragma unroll 4
+    FOR x FROM 1 TO 10 DO
+    BEGIN
+        squ := squ + x;
+        !squ
+    END;
+
+    !900;
+    @pragma unroll 3
+    FOR x FROM 9 TO 1 BY 2 DO
+        !x
+END.

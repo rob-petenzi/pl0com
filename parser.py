@@ -214,7 +214,11 @@ class Parser:
                 exit()
             self.expect('dosym')
             body = self.statement(symtab)
-            return ir.ForStat(ind_sym=ind_var, init=start, cond=stop, step=step, body=body, unroll=pragmas['unroll'], symtab=symtab)
+            if start <= stop:
+                direction = "up"
+            else:
+                direction = "down"
+            return ir.ForStat(ind_sym=ind_var, init=start, cond=stop, step=step, body=body, unroll=pragmas['unroll'], direction=direction, symtab=symtab)
         elif self.accept('print'):
             exp = self.expression(symtab)
             return ir.PrintStat(exp=exp, symtab=symtab)

@@ -478,7 +478,7 @@ class WhileStat(Stat):
 
 
 class ForStat(Stat):  
-    def __init__(self, parent=None, ind_sym=None, init=None, cond=None, step=None, body=None, unroll=None, symtab=None):
+    def __init__(self, parent=None, ind_sym=None, init=None, cond=None, step=None, body=None, unroll=None, direction=None, symtab=None):
         super().__init__(parent, [], symtab)
         self.ind_sym = ind_sym
         self.start_int = init
@@ -486,6 +486,7 @@ class ForStat(Stat):
         self.step_int = step
         self.body = body
         self.unroll_fac = unroll
+        self.direction = direction
 
         # Generate statements with the parsed value, need to do it here since lowering is bottom up (children
         # statements are lowered before their parent). If I created these in the lowering, they wouldn't get lowered
@@ -498,12 +499,13 @@ class ForStat(Stat):
         step_ind_var = Var(None, self.ind_sym, symtab=self.symtab)
         cond_ind_var = Var(None, self.ind_sym, symtab=self.symtab)
         self.init = AssignStat(self, target=self.ind_sym, expr=init_const, symtab=self.symtab)
-        if init <= cond:
-            step_expr = BinExpr(None, ['plus', step_ind_var, step_const])
-            self.cond = BinExpr(self, ['leq', cond_ind_var, cond_const])
-        else:
+        # Default direction of loop is up (even for ones where start == stop)
+        if direction == "down":
             step_expr = BinExpr(None, ['minus', step_ind_var, step_const])
             self.cond = BinExpr(self, ['geq', cond_ind_var, cond_const])
+        else:
+            step_expr = BinExpr(None, ['plus', step_ind_var, step_const])
+            self.cond = BinExpr(self, ['leq', cond_ind_var, cond_const])
         self.step = AssignStat(self, target=self.ind_sym, expr=step_expr, symtab=self.symtab)
 
         self.body.parent = self

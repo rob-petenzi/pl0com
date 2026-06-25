@@ -33,5 +33,30 @@ BEGIN
 
     !700;
     FOR x FROM 3 TO 7 DO
+        !x;
+
+    !800;
+    @pragma unroll 4
+    FOR x FROM 8 TO 1 DO
+        !x;
+
+    !900;
+    @pragma unroll 4
+    FOR x FROM 10 TO 1 DO
+        !x;
+
+    !1000;
+    @pragma unroll 3
+    FOR x FROM 13 TO 1 BY 2 DO
+        !x;
+
+    !1100;
+    @pragma unroll 4
+    FOR x FROM 3 TO 1 DO
+        !x;
+    
+    !1200;
+    @pragma unroll 3
+    FOR x FROM 9 TO 1 BY 2 DO
         !x
 END.

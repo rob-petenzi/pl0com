@@ -20,8 +20,8 @@ def compile_program(text, unroll_factor, tile_size):
     print("\n\n++++++OPTIMIZATIONS++++++")
     res = optimizations.optimize(res, cli_unroll_factor=unroll_factor, tile_size=tile_size)
     print("++++++++++++\n\n")
-    print('\n', res, '\n')
     return 1
+    print('\n', res, '\n')
     res.navigate(print_stat_list)
 
     node_list = get_node_list(res)

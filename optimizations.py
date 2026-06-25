@@ -42,7 +42,7 @@ def _collect_unrollable_loops(root, global_factor):
         if isinstance(node, ir.ForStat):
             print(f"{GREEN}[UNROLL] Found for loop {id(node)}{RESET}")
             # Unroll factor = 1 means do not unroll
-            if _check_ind_assignment(node) and _check_ascending_loop(node) and node.unroll_fac != 1:
+            if _check_ind_assignment(node) and node.unroll_fac != 1:
                 print(f"{GREEN}[UNROLL] Found unrollable loop {id(node)} with factor {node.unroll_fac if node.unroll_fac != 0 else global_factor}{RESET}")
                 unrollable_loops.append(node)
     
@@ -62,13 +62,13 @@ def _check_ind_assignment(loop):
     loop.body.navigate(is_regular)
     return regular
 
-def _check_ascending_loop(loop):
-    """Check if loop is ascending (start value < stop value)"""
-    if loop.start_int > loop.stop_int:
-        print(f"{RED}[UNROLL] Loop {id(loop)} is not ascending.{RESET}")
+def _is_ascending(loop):
+    """Checks if loop is ascending"""
+    if loop.direction == "up":
+        return True
+    else:
         return False
-    return True
-
+    
 def _loop_metrics(loop, global_fac):
     """Calculate info to build unrolled and correction loops"""
     info = {}
@@ -77,18 +77,27 @@ def _loop_metrics(loop, global_fac):
         unroll_factor = global_fac
     else:
         unroll_factor = loop.unroll_fac
-    trip_count = ((loop.stop_int - loop.start_int) // loop.step_int) + 1
-    unroll_iterations = trip_count // unroll_factor
-    # This is so the condition becomes the start of the last unrolled chunk instead of the original loop bound
-    info["unrolled_loop_stop"] = loop.start_int + ((unroll_iterations - 1) * unroll_factor * loop.step_int)
+
     info["unrolled_loop_start"] = loop.start_int
     info["unrolled_loop_step"] = loop.step_int
-    info["cleanup_loop_iter"] = trip_count % unroll_factor
     info["cleanup_loop_stop"] = loop.stop_int
-    info["cleanup_loop_start"] = loop.start_int + (unroll_iterations * unroll_factor * loop.step_int)
     info["cleanup_loop_step"] = loop.step_int
     info["unroll_factor"] = unroll_factor
-    info["unrolled_loop_iter"] = unroll_iterations
+    if _is_ascending(loop):
+        trip_count = ((loop.stop_int - loop.start_int) // loop.step_int) + 1
+        unroll_iterations = trip_count // unroll_factor
+        # This is so the condition becomes the start of the last unrolled chunk instead of the original loop bound
+        info["unrolled_loop_stop"] = loop.start_int + ((unroll_iterations - 1) * unroll_factor * loop.step_int)
+        info["cleanup_loop_iter"] = trip_count % unroll_factor
+        info["cleanup_loop_start"] = loop.start_int + (unroll_iterations * unroll_factor * loop.step_int)
+        info["unrolled_loop_iter"] = unroll_iterations
+    else:
+        trip_count = ((loop.start_int - loop.stop_int) // loop.step_int) + 1
+        unroll_iterations = trip_count // unroll_factor
+        info["unrolled_loop_stop"] = loop.start_int - ((unroll_iterations - 1) * unroll_factor * loop.step_int)
+        info["cleanup_loop_iter"] = trip_count % unroll_factor
+        info["cleanup_loop_start"] = loop.start_int - (unroll_iterations * unroll_factor * loop.step_int)
+        info["unrolled_loop_iter"] = unroll_iterations
     return info
 
 def _clone_body(loop, n):
@@ -117,10 +126,10 @@ def _create_unrolled_loop(loop, info):
     """Returns unrolled loop"""
     return ir.ForStat(None, loop.ind_sym, 
                       info["unrolled_loop_start"], info["unrolled_loop_stop"],
-                      info["unrolled_loop_step"], _clone_body(loop, info["unroll_factor"]), 1, loop.symtab)
+                      info["unrolled_loop_step"], _clone_body(loop, info["unroll_factor"]), 1, loop.direction, loop.symtab)
 
 def _create_cleanup_loop(loop, info):
     """Returns cleanup loop"""
     return ir.ForStat(None, loop.ind_sym, 
                       info["cleanup_loop_start"], info["cleanup_loop_stop"],
-                      info["cleanup_loop_step"], _clone_body(loop, 1), 1, loop.symtab)
+                      info["cleanup_loop_step"], _clone_body(loop, 1), 1, loop.direction, loop.symtab)
