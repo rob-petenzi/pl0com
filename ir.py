@@ -186,7 +186,7 @@ class IRNode:  # abstract
             pass
 
         attrs = {'body', 'cond', 'value', 'thenpart', 'elsepart', 'symbol', 'call', 'step', 'expr', 'target', 'defs',
-                 'global_symtab', 'local_symtab', 'offset', 'init'} & set(dir(self))
+                 'global_symtab', 'local_symtab', 'offset', 'init', 'start_int', 'stop_int', 'step_int', 'unroll_fac' } & set(dir(self))
 
         res = repr(type(self)) + ' ' + repr(id(self)) + ' {\n'
         if self.parent is not None:
@@ -478,10 +478,14 @@ class WhileStat(Stat):
 
 
 class ForStat(Stat):  
-    def __init__(self, parent=None, ind_sym=None, init=None, cond=None, step=None, body=None, symtab=None):
+    def __init__(self, parent=None, ind_sym=None, init=None, cond=None, step=None, body=None, unroll=None, symtab=None):
         super().__init__(parent, [], symtab)
         self.ind_sym = ind_sym
+        self.start_int = init
+        self.stop_int = cond
+        self.step_int = step
         self.body = body
+        self.unroll_fac = unroll
 
         # Generate statements with the parsed value, need to do it here since lowering is bottom up (children
         # statements are lowered before their parent). If I created these in the lowering, they wouldn't get lowered

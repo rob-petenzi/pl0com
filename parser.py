@@ -26,6 +26,13 @@ class Parser:
         print('getsym:', self.new_sym, self.new_value)
         return 1
 
+    def lookahead(self, s):
+        """Check if next symbol is s without consuming it"""
+        if self.new_sym == s:
+            return True
+        else:
+            return False
+    
     def error(self, msg):
         print('\033[31m', msg, self.new_sym, self.new_value, '\033[39m')
 
@@ -148,13 +155,25 @@ class Parser:
 
     @logger
     def statement(self, symtab):
+        # Dictionary so if we want to add more pragmas later it is easier
+        pragmas = {}
+        pragmas['unroll'] = 1   # Don't unroll unless specified otherwise
+        # If pragma is here, read it and add its value to the for loop processed after. 
+        if self.accept('pragmasym'):
+            if self.expect('unrollsym'):
+                pragmas["unroll"] = self.read_const()
+                if not self.lookahead('forsym'):
+                    self.error("unroll pragma must be before a for loop")
+                    exit()
+            else:
+                self.error("unknown pragma, currently supporting only unroll.")
+                exit()
         if self.accept('ident'):
             target = symtab.find(self.value)
             offset = self.array_offset(symtab)
             self.expect('becomes')
             expr = self.expression(symtab)
             return ir.AssignStat(target=target, offset=offset, expr=expr, symtab=symtab)
-
         elif self.accept('callsym'):
             self.expect('ident')
             return ir.CallStat(call_expr=ir.CallExpr(function=symtab.find(self.value), symtab=symtab), symtab=symtab)
@@ -185,7 +204,7 @@ class Parser:
             start = self.read_const()
             self.expect('tosym')
             stop = self.read_const()
-            if self.expect('bysym'):
+            if self.accept('bysym'):
                 step = self.read_const()
             else:
                 # Default loop increment is 1
@@ -195,7 +214,7 @@ class Parser:
                 exit()
             self.expect('dosym')
             body = self.statement(symtab)
-            return ir.ForStat(ind_sym=ind_var, init=start, cond=stop, step=step, body=body, symtab=symtab)
+            return ir.ForStat(ind_sym=ind_var, init=start, cond=stop, step=step, body=body, unroll=pragmas['unroll'], symtab=symtab)
         elif self.accept('print'):
             exp = self.expression(symtab)
             return ir.PrintStat(exp=exp, symtab=symtab)
