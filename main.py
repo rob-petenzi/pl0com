@@ -4,6 +4,7 @@
 
 import lexer
 import parser
+import optimizations
 from support import *
 from datalayout import *
 from cfg import *
@@ -12,12 +13,15 @@ from codegen import *
 import argparse
 
 
-def compile_program(text):
+def compile_program(text, unroll_factor, tile_size):
     lex = lexer.Lexer(text)
     pars = parser.Parser(lex)
     res = pars.program()
+    print("\n\n++++++OPTIMIZATIONS++++++")
+    res = optimizations.optimize(res, cli_unroll_factor=unroll_factor, tile_size=tile_size)
+    print("++++++++++++\n\n")
     print('\n', res, '\n')
-
+    return 1
     res.navigate(print_stat_list)
 
     node_list = get_node_list(res)
@@ -66,7 +70,7 @@ def driver_main():
     parser.add_argument("input", nargs="?", help="PL/0 input file path")
     parser.add_argument("--test", action="store_true", help="Compile test program (./samples/prog1.pl0)")
     parser.add_argument("-o", "--output", help="Output assembly file path")
-    parser.add_argument("-u", "--unroll", type=int, default=1, help="Global unroll factor")
+    parser.add_argument("-u", "--unroll", type=int, default=1, help="Global unroll factor, can be specified per loop via @pragma unroll <factor>. Factor 0 means use global unroll factor, factor 1 means no unrolling.")
     parser.add_argument("-t", "--tile", type=int, default=32, help="Tile size")
     args = parser.parse_args()
 
@@ -78,7 +82,7 @@ def driver_main():
             input_file = f_in.read()
     else:
         parser.error("Input file is required, unless --test is used.")
-    code = compile_program(input_file)
+    code = compile_program(input_file, args.unroll, args.tile)
 
     with open(args.output or "./out.s", "w") as f_out:
         f_out.write(code)

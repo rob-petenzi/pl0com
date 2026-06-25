@@ -2,10 +2,9 @@ VAR x, i, squ;
  
 BEGIN
     squ := 0;
-    @pragma unroll 4
+    @pragma unroll 1
     FOR x FROM 1 TO 10 DO
     BEGIN
-        squ := squ + x;
-        !squ
+        !x
     END
 END. 

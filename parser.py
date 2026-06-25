@@ -157,7 +157,7 @@ class Parser:
     def statement(self, symtab):
         # Dictionary so if we want to add more pragmas later it is easier
         pragmas = {}
-        pragmas['unroll'] = 1   # Don't unroll unless specified otherwise
+        pragmas['unroll'] = 0   # Use global unroll factor, specified via CLI
         # If pragma is here, read it and add its value to the for loop processed after. 
         if self.accept('pragmasym'):
             if self.expect('unrollsym'):

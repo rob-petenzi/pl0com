@@ -4,8 +4,8 @@
 The compiler now supports for loops in the form `for i from X to Y [by Z] do`, where X, Y, Z are constant integers.
 
 ## Loop unrolling optimization
-Unroll loops by a factor. The factor can be specified for each loop via `@pragma unroll F`, as a command line argument `--unroll F` or it will fall back to an hardcoded constant (1) - do not unroll.
-- Replicate body F times along with step statements. Add correction loop at the end to handle the case where trip count is not dividable by unroll factor.
+Unroll loops by a factor. The factor can be specified for each loop via `@pragma unroll F`, as a command line argument `--unroll F` or it will fall back to an hardcoded constant (1) - do not unroll. Done before lowering.
+- Replicate body F times along with step statements. Add correction loop at the end to handle the case where trip count is not divisible by unroll factor. In the replication deep copy IR nodes until symbols, which need to be kept to avoid treating them as different variables.
 - Need to check that no assignments to the induction variable are done inside the body.
 - Unroll only loops with positive trip count.
 - TODO: possibly unroll and jam
