@@ -7,7 +7,7 @@ have a lowering function or a code generation function (codegen functions are
 in a separate module though)."""
 
 from codegenhelp import *
-
+import copy
 # UTILITIES
 
 tempcount = 0
@@ -476,36 +476,47 @@ class WhileStat(Stat):
         stat_list = StatList(self.parent, [self.cond, branch, self.body, loop, exit_stat], self.symtab)
         return self.parent.replace(self, stat_list)
 
+def _clone_node(node):   
+    memo = {}
+    for sym in node.symtab:
+        memo[id(sym)] = sym
+    return copy.deepcopy(node, memo)
 
 class ForStat(Stat):  
-    def __init__(self, parent=None, ind_sym=None, init=None, cond=None, step=None, body=None, unroll=None, direction=None, symtab=None):
+    def __init__(self, parent=None, ind_sym=None, start=None, trip_count=None, step=None, chunk_step_int=None, body=None, unroll=None, symtab=None):
         super().__init__(parent, [], symtab)
         self.ind_sym = ind_sym
-        self.start_int = init
-        self.stop_int = cond
+        self.start = start
+        self.trip_count = trip_count
         self.step_int = step
         self.body = body
         self.unroll_fac = unroll
-        self.direction = direction
+        # Value to add to get the start of the next unrolled chunk, for normal loops is same as step.
+        # For unrolled loops we need this because we clone the step statement when unrolling, so we need to
+        # adapt the bound accounting for this. 
+        self.chunk_step_int = chunk_step_int
 
         # Generate statements with the parsed value, need to do it here since lowering is bottom up (children
         # statements are lowered before their parent). If I created these in the lowering, they wouldn't get lowered
         # and would cause a bug. Since when we get to self.lower() all statements inside the node are already lowered,
         # we can do things like cond.set_label() and cond.destination(): these acutually are a StatList, which has
         # these methods.
-        init_const = Const(None, value=init, symtab=self.symtab)
-        cond_const = Const(None, value=cond, symtab=self.symtab)
-        step_const = Const(None, value=step, symtab=self.symtab)
-        step_ind_var = Var(None, self.ind_sym, symtab=self.symtab)
-        cond_ind_var = Var(None, self.ind_sym, symtab=self.symtab)
-        self.init = AssignStat(self, target=self.ind_sym, expr=init_const, symtab=self.symtab)
+        init_start = _clone_node(self.start)
+        bound_start = _clone_node(self.start)
+        self.init = AssignStat(self, target=self.ind_sym, expr=init_start, symtab=self.symtab)
+        
+        bound_offset = Const(value=(self.trip_count - 1) * self.chunk_step_int, symtab=self.symtab)
+        bound_expr = BinExpr(children=['plus', bound_start, bound_offset])
+        ind_var = Var(var=self.ind_sym, symtab=self.symtab)
+        cond_ind = _clone_node(ind_var)
+        step_ind = _clone_node(ind_var)
         # Default direction of loop is up (even for ones where start == stop)
-        if direction == "down":
-            step_expr = BinExpr(None, ['minus', step_ind_var, step_const])
-            self.cond = BinExpr(self, ['geq', cond_ind_var, cond_const])
+        if self.step_int < 0:
+            self.cond = BinExpr(self, children=['geq', cond_ind, bound_expr])
+            step_expr = BinExpr(children=['minus', step_ind, Const(value=abs(self.step_int))])
         else:
-            step_expr = BinExpr(None, ['plus', step_ind_var, step_const])
-            self.cond = BinExpr(self, ['leq', cond_ind_var, cond_const])
+            self.cond = BinExpr(self, children=['leq', cond_ind, bound_expr])
+            step_expr = BinExpr(children=['plus', step_ind, Const(value=self.step_int)])
         self.step = AssignStat(self, target=self.ind_sym, expr=step_expr, symtab=self.symtab)
 
         self.body.parent = self

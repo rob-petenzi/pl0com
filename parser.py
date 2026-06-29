@@ -103,7 +103,7 @@ class Parser:
             return var
     
     @logger 
-    def read_const(self):
+    def read_int(self):
         """Read value of a constant"""
         if self.expect('number'):
             return int(self.value)
@@ -161,7 +161,7 @@ class Parser:
         # If pragma is here, read it and add its value to the for loop processed after. 
         if self.accept('pragmasym'):
             if self.expect('unrollsym'):
-                pragmas["unroll"] = self.read_const()
+                pragmas["unroll"] = self.read_int()
                 if not self.lookahead('forsym'):
                     self.error("unroll pragma must be before a for loop")
                     exit()
@@ -201,11 +201,11 @@ class Parser:
         elif self.accept('forsym'):
             ind_var = self.read_identifier(symtab)
             self.expect('fromsym')
-            start = self.read_const()
+            start = self.read_int()
             self.expect('tosym')
-            stop = self.read_const()
+            stop = self.read_int()
             if self.accept('bysym'):
-                step = self.read_const()
+                step = self.read_int()
             else:
                 # Default loop increment is 1
                 step = 1
@@ -214,11 +214,10 @@ class Parser:
                 exit()
             self.expect('dosym')
             body = self.statement(symtab)
-            if start <= stop:
-                direction = "up"
-            else:
-                direction = "down"
-            return ir.ForStat(ind_sym=ind_var, init=start, cond=stop, step=step, body=body, unroll=pragmas['unroll'], direction=direction, symtab=symtab)
+            trip_cnt = (abs(stop - start) // step) + 1
+            if start > stop:
+                step = -step
+            return ir.ForStat(ind_sym=ind_var, start=ir.Const(value=start, symtab=symtab), trip_count=trip_cnt, step=step, chunk_step_int=step, body=body, unroll=pragmas['unroll'], symtab=symtab)
         elif self.accept('print'):
             exp = self.expression(symtab)
             return ir.PrintStat(exp=exp, symtab=symtab)

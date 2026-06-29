@@ -1,0 +1,32 @@
+VAR i, j;
+
+BEGIN
+    FOR i FROM 1 TO 4 DO
+    BEGIN
+        FOR j FROM 1 TO 4 DO
+        BEGIN
+            !i;
+            !j
+        END
+    END;
+
+    FOR i FROM 1 TO 5 DO
+    BEGIN
+        FOR j FROM 1 TO 5 DO
+        BEGIN
+            !i;
+            !j
+        END
+    END;
+
+    !9000;
+    FOR i FROM 1 TO 4 DO
+    BEGIN
+        @pragma unroll 2
+        FOR j FROM 1 TO 4 DO
+        BEGIN
+            !i;
+            !j
+        END
+    END
+END.

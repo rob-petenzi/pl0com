@@ -4,7 +4,9 @@ BEGIN
     !100;
     @pragma unroll 4
     FOR x FROM 1 TO 8 DO
-        !x;
+        BEGIN
+        !x
+        END;
 
     !200;
     @pragma unroll 4

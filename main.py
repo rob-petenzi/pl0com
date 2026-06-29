@@ -20,7 +20,6 @@ def compile_program(text, unroll_factor, tile_size):
     print("\n\n++++++OPTIMIZATIONS++++++")
     res = optimizations.optimize(res, cli_unroll_factor=unroll_factor, tile_size=tile_size)
     print("++++++++++++\n\n")
-    return 1
     print('\n', res, '\n')
     res.navigate(print_stat_list)
 
@@ -82,6 +81,9 @@ def driver_main():
             input_file = f_in.read()
     else:
         parser.error("Input file is required, unless --test is used.")
+    if args.tile == 0:
+        print("Tile size cannot be 0. Exiting ...")
+        exit()
     code = compile_program(input_file, args.unroll, args.tile)
 
     with open(args.output or "./out.s", "w") as f_out:
