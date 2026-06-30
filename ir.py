@@ -914,7 +914,15 @@ class Block(Stat):
         self.defs.parent = self
         self.stackroom = 0
 
-
+class VectorArrayOp(Stat):
+    def __init__(self, parent, dest, srca, srcb, index, op, symtab=None):
+        super().__init__(parent, [], symtab)
+        self.dest = dest
+        self.srca = srca
+        self.srcb = srcb
+        self.ind_var = index
+        self.operation = op
+    # No lowering, handle this node in codegen directly
 # DEFINITIONS
 
 class Definition(IRNode):

@@ -360,6 +360,81 @@ def unarystat_codegen(self, regalloc):
 
 UnaryStat.codegen = unarystat_codegen
 
+def vectorarrayop_codegen(self, regalloc):
+    res = ''
+    trail = ''
+
+    r_index = get_register_string(0)      # r0
+    r_srca = get_register_string(1)       # r1
+    r_srcb = get_register_string(2)       # r2
+    r_dest = get_register_string(3)       # r3
+    r_addr = get_register_string(REG_SCRATCH)  # r12
+
+    res += save_regs([0, 1, 2, 3, REG_SCRATCH])
+
+    # r0 = current induction variable value
+    addr_code, addr_trail = gen_addr_of_symbol(self.ind_var, r_addr)
+    res += addr_code
+    trail += addr_trail
+    res += '\tldr ' + r_index + ', [' + r_addr + ']\n'
+
+    # r0 = byte offset = i * sizeof(short)
+    res += '\tlsl ' + r_index + ', ' + r_index + ', #1\n'
+
+    # r1 = packed srca[i], srca[i + 1]
+    addr_code, addr_trail = gen_addr_of_symbol(self.srca, r_addr)
+    res += addr_code
+    trail += addr_trail
+    res += '\tadd ' + r_addr + ', ' + r_addr + ', ' + r_index + '\n'
+    res += '\tldr ' + r_srca + ', [' + r_addr + ']\n'
+
+    # r2 = packed srcb[i], srcb[i + 1]
+    addr_code, addr_trail = gen_addr_of_symbol(self.srcb, r_addr)
+    res += addr_code
+    trail += addr_trail
+    res += '\tadd ' + r_addr + ', ' + r_addr + ', ' + r_index + '\n'
+    res += '\tldr ' + r_srcb + ', [' + r_addr + ']\n'
+
+    # r3 = vector operation result
+    if self.operation == 'plus':
+        res += '\tsadd16 ' + r_dest + ', ' + r_srca + ', ' + r_srcb + '\n'
+    elif self.operation == 'minus':
+        res += '\tssub16 ' + r_dest + ', ' + r_srca + ', ' + r_srcb + '\n'
+    else:
+        raise Exception('unsupported vector operation ' + repr(self.operation))
+
+    # dest[i], dest[i + 1] = r3
+    addr_code, addr_trail = gen_addr_of_symbol(self.dest, r_addr)
+    res += addr_code
+    trail += addr_trail
+    res += '\tadd ' + r_addr + ', ' + r_addr + ', ' + r_index + '\n'
+    res += '\tstr ' + r_dest + ', [' + r_addr + ']\n'
+
+    res += restore_regs([0, 1, 2, 3, REG_SCRATCH])
+
+    return [res, trail]
+
+def gen_addr_of_symbol(symbol, reg):
+    res = ''
+    trail = ''
+    ai = symbol.allocinfo
+
+    if type(ai) is LocalSymbolLayout:
+        off = ai.fpreloff
+        if off > 0:
+            res += '\tadd ' + reg + ', ' + get_register_string(REG_FP)
+            res += ', #' + repr(off) + '\n'
+        else:
+            res += '\tsub ' + reg + ', ' + get_register_string(REG_FP)
+            res += ', #' + repr(-off) + '\n'
+    else:
+        lab, tmp = new_local_const(ai.symname)
+        trail += tmp
+        res += '\tldr ' + reg + ', ' + lab + '\n'
+
+    return [res, trail]
+
+VectorArrayOp.codegen = vectorarrayop_codegen
 
 def generate_code(program, regalloc):
     res = '\t.text\n'

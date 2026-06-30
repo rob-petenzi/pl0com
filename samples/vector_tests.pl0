@@ -1,0 +1,55 @@
+VAR i;
+VAR a[9]: short;
+VAR b[9]: short;
+VAR c[9]: short;
+VAR d[9]: short;
+
+BEGIN
+    FOR i FROM 0 TO 7 DO
+    BEGIN
+        b[i] := i + 1;
+        c[i] := 10
+    END;
+
+    FOR i FROM 0 TO 7 DO
+    BEGIN
+        a[i] := b[i] + c[i]
+    END;
+
+    FOR i FROM 0 TO 7 DO
+    BEGIN
+        d[i] := c[i] - b[i]
+    END;
+
+    !1000;
+    FOR i FROM 0 TO 7 DO
+        !a[i];
+
+    !2000;
+    FOR i FROM 0 TO 7 DO
+        !d[i];
+
+    FOR i FROM 0 TO 8 DO
+    BEGIN
+        b[i] := i + 1;
+        c[i] := 10
+    END;
+
+    FOR i FROM 0 TO 8 DO
+    BEGIN
+        a[i] := b[i] + c[i]
+    END;
+
+    FOR i FROM 0 TO 8 DO
+    BEGIN
+        d[i] := c[i] - b[i]
+    END;
+
+    !3000;
+    FOR i FROM 0 TO 8 DO
+        !a[i];
+
+    !4000;
+    FOR i FROM 0 TO 8 DO
+        !d[i]
+END.
